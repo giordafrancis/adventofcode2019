@@ -14,13 +14,12 @@ assert module_fuel(100756) == 33583
 def required_fuel(module: int) -> int:
 
     fuel = module_fuel(module)
-    total_fuel = {fuel} # no duplicates so set is used
+    total_fuel = 0 
 
-    while fuel:
-        curr = module_fuel(fuel) # current fuel
-        fuel = 0 if curr <= 0 else curr
-        total_fuel.add(fuel)
-    return sum(total_fuel)
+    while fuel > 0:
+        total_fuel += fuel
+        fuel = module_fuel(fuel)
+    return total_fuel
 
 assert required_fuel(14) == 2
 assert required_fuel(1969) == 966
