@@ -29,7 +29,7 @@ if __name__ == "__main__":
      with open("day01_input.txt") as file:
         modules = file.readlines()
         part_1 = sum(module_fuel(int(module))
-                    for module in modules )
+                    for module in modules)
         part_2 = sum(required_fuel(int(module))
                     for module in modules)
         print("Part 1 total module fuel->", part_1)
