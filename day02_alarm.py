@@ -8,9 +8,9 @@ import itertools
 class Command(NamedTuple):
     pointer: int
     opcode: int
-    pos_1: int
-    pos_2: int
-    pos_final: int
+    pos_1: int = None
+    pos_2: int = None
+    pos_final: int = None
 
 def instructions(inputs: List[int]) -> Iterator[Command]:
     """
@@ -20,13 +20,13 @@ def instructions(inputs: List[int]) -> Iterator[Command]:
     for i in range(0, length, 4):
         opcode = inputs[i]
         if opcode == 99:
-            yield Command(pointer=i, opcode=opcode, pos_1=None, pos_2=None, pos_final=None)
+            yield Command(pointer=i, opcode=opcode)
         else:
             yield Command(pointer=i, opcode=opcode, pos_1=inputs[i + 1] , pos_2=inputs[i + 2], pos_final=inputs[i + 3])
             
 TEST_INPUT = [1,9,10,3,2,3,11,0,99,30,40,50]
 
-def intcode(inputs: List[int], noun:int=0, verb:int=0) -> None:
+def intcode(inputs: List[int], noun:int=0, verb:int=0) -> int:
     """
     Return value at position 0 once 
     opcode 99 is found. 
@@ -47,7 +47,7 @@ def intcode(inputs: List[int], noun:int=0, verb:int=0) -> None:
     
 assert intcode(TEST_INPUT, noun=TEST_INPUT[1], verb=TEST_INPUT[2]) == 3500
 
-def problem_prep(problem_input: str, noun:int = 0, verb:int = 0) -> List[int]:
+def problem_prep(problem_input: str) -> List[int]:
     inputs = [int(num) for num in problem_input.split(",")]
     return inputs
 
@@ -68,11 +68,11 @@ def inputs_brute_force(inputs: List[int]) -> int:
 if __name__ == "__main__":
     with open("day02_inputs.txt") as file:
         problem_input = file.read()
-        inputs = problem_prep(problem_input, noun=12, verb=2)
+        inputs = problem_prep(problem_input)
         part_1 = intcode(inputs, noun=12, verb=2)
         part_2 = inputs_brute_force(inputs)
-        print("PART 1 halt code pos 0->",part_1)
-        print("PART 2 value based on input pairs is->",part_2)
+        print("PART 1 halt code pos 0->", part_1)
+        print("PART 2 value based on input pairs is->", part_2)
 
 
 
