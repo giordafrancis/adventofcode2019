@@ -19,7 +19,7 @@ def instructions(inputs: List[int]) -> Iterator[Command]:
     length = len(inputs)
     for i in range(0, length, 4):
         opcode = inputs[i]
-        if  opcode == 99:
+        if opcode == 99:
             yield Command(pointer=i, opcode=opcode, pos_1=None, pos_2=None, pos_final=None)
         else:
             yield Command(pointer=i, opcode=opcode, pos_1=inputs[i + 1] , pos_2=inputs[i + 2], pos_final=inputs[i + 3])
@@ -39,13 +39,11 @@ def intcode(inputs: List[int], noun:int=0, verb:int=0) -> None:
         if command.opcode == 99:
             return inputs[0]
         elif command.opcode == 1:
-             overwrite = inputs[command.pos_1] + inputs[command.pos_2]
-             inputs[command.pos_final] = overwrite
+             inputs[command.pos_final] = inputs[command.pos_1] + inputs[command.pos_2]
         elif command.opcode == 2:
-             overwrite = inputs[command.pos_1] * inputs[command.pos_2]
-             inputs[command.pos_final] = overwrite
+             inputs[command.pos_final] = inputs[command.pos_1] * inputs[command.pos_2]
         else:
-            print("no opcode 99 found")
+            raise RuntimeError(f"invalid opcode {command.opcode}")
     
 assert intcode(TEST_INPUT, noun=TEST_INPUT[1], verb=TEST_INPUT[2]) == 3500
 
@@ -74,7 +72,7 @@ if __name__ == "__main__":
         part_1 = intcode(inputs, noun=12, verb=2)
         part_2 = inputs_brute_force(inputs)
         print("PART 1 halt code pos 0->",part_1)
-        print("Part 2 value based on input pairs is->", part_2)
+        print("PART 2 value based on input pairs is->",part_2)
 
 
 
