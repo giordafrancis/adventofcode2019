@@ -2,21 +2,18 @@
 https://adventofcode.com/2019/day/3
 """
 
-from typing import NamedTuple, List, Pattern, Iterator, Tuple, Dict
-from collections import defaultdict
+from typing import NamedTuple, List, Pattern, Iterator, Dict, Set
 import re
 
 patt = re.compile("(?P<axis>[L|R|U|D])(?P<distance>[0-9]+)")
-
-Coords = Tuple[int]
 
 class Command(NamedTuple):
     axis: str
     distance: int
 
-class Coordinates(NamedTuple):
-    wire_name: str
-    coords: List[Coords]
+class XY(NamedTuple):
+    x: int
+    y: int
 
 def parse_wire(moves: List[str], pattern: Pattern) -> Iterator[Command]:
     """
@@ -27,46 +24,42 @@ def parse_wire(moves: List[str], pattern: Pattern) -> Iterator[Command]:
         yield Command(axis=g.group("axis"),
                       distance=int(g.group('distance')))
 
-def move_wire(wire_name:str, moves: List[str], pattern: Pattern) -> Coordinates:
+def move_wire(moves: List[str], pattern: Pattern) -> Dict[XY, int]:
     """
-    Calculates list of Coordinates based on Commands
+    Calculates a Dict of XY keys and num_stpes as vals 
+    based on Commands parsing
     """
     commands = parse_wire(moves, pattern)
-    coords = [(0,0)] # all wires start at (0,0)
+    locs= {} # all wires start at (0,0)
+    x = y = num_steps = 0
     for command in commands:
-        x, y = coords[-1]
         axis = command.axis
-        distance = command.distance + 1 # its inclusive of total distance
-        if axis == "R" or axis == "L": # x case
+        distance = command.distance
+        for _ in range(distance): # as its inclusive of total distance
             if axis == "R":
-                for i in range(1, distance): # 0 start will lead to duplicates at joints
-                    coords.append((x + i, y)) 
+                x += 1
+            elif axis == "L":
+                x -= 1
+            elif axis == "U":
+                y += 1
+            elif axis == "D": 
+                y -= 1
             else:
-                for i in range(1, distance):
-                    coords.append((x - i, y))
-        elif axis == "U" or axis == "D": # y case
-            if axis == "U":
-                for i in range(1, distance):
-                    coords.append((x, y + i))     
-            else:
-                for i in range(1, distance):
-                    coords.append((x, y - i)) 
-        else:
-            raise ValueError(f"not a valid axis {axis}")
+                raise ValueError(f"not a valid axis {axis}")
+            num_steps += 1
+            locs[XY(x,y)] = num_steps
+    return locs
 
-    return Coordinates(wire_name= wire_name,
-                       coords = coords)
-
-def _parse_string(inputs: str)-> List[Coordinates]:
+def _parse_string(inputs: str)-> Iterator[Dict[XY,int]]:
     """
     helper function to clean the string input
     into a list of Coordinates
     """
-    wires = [wire.split(',') for wire in inputs.split("\n")]
-    return [move_wire(wire_name=f"wire_{i}",moves= wire, pattern= patt) # patt hardcoded..
-                    for i, wire in zip(range(len(wires)), wires)]
+    wires = iter(wire.split(',') for wire in inputs.split("\n"))
+    for wire in wires:
+        yield move_wire(moves= wire, pattern= patt) # patt hardcoded.           
 
-def manhattan_distance(coord1: Coords, coord0:Coords = (0,0)) -> int:
+def manhattan_distance(coord1:XY, coord0:XY=(0,0)) -> int:
     x1, y1 = coord1
     x0, y0 = coord0
     return abs(x1 - x0 ) + abs(y1 - y0)
@@ -76,13 +69,10 @@ def crossed_wires(inputs: str) -> int:
     finds intersection and returns closest to origin (0,0)
     """
     wires = _parse_string(inputs)
-
-    wire1 = set(wires[0].coords) # hardcoded for 2 wires for part 1
-    wire2 = set(wires[1].coords)
-    crossed_at = wire1.intersection(wire2)
+    wire1, wire2 = set(next(wires)), set(next(wires)) # hardcoded for 2 wires for part 1 & 2
+    crossed_at = wire1.intersection(wire2) # on the keys only XY
     return min(manhattan_distance(coords) 
-               for coords in crossed_at 
-               if coords != (0,0))
+               for coords in crossed_at)
 
 test_string = """R75,D30,R83,U83,L12,D49,R71,U7,L72
 U62,R66,U55,R34,D71,R55,D58,R83"""
@@ -98,34 +88,16 @@ assert crossed_wires(test_string) == 6
 
 # PART2 
 
-
 def crossed_wires_travel(inputs: str) -> int:
     """
+    Returns the min  traveled distance for all 
+    wires intersections
     """
     wires = _parse_string(inputs)
-    wire1 = wires[0]
-    wire2 = wires[1]
-    travel_wire1 = _dict_cords(wire1)
-    travel_wire2 = _dict_cords(wire2)
-    crossed_at = [coords for coords in wire1.coords if coords in wire2.coords]
-    return min((travel_wire1[coords] + travel_wire2[coords]) 
-                for coords in crossed_at
-                if coords != (0,0))
-
-
-def _dict_cords(wire: Coordinates) -> Dict[Coords, List]:
-    """
-    """
-    coord_travel = defaultdict(int)
-    coord_travel[(0,0)] = 0
-    distance = 0 
-    for coord0, coord1 in zip(wire.coords, wire.coords[1:]):
-        distance += manhattan_distance(coord1, coord0)
-        if coord_travel[coord1]:
-            continue # if value already, do nothing as we want the first pass
-        else:
-            coord_travel[coord1] = distance
-    return coord_travel
+    wire1, wire2 = next(wires), next(wires) # hardcoded for 2 wires for part 1 & 2
+    crossed_at = set(wire1).intersection(set(wire2))
+    return min((wire1[xy] + wire2[xy]) 
+                for xy in crossed_at)
 
 test_string = """R75,D30,R83,U83,L12,D49,R71,U7,L72
 U62,R66,U55,R34,D71,R55,D58,R83"""
