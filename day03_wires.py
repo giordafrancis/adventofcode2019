@@ -3,6 +3,7 @@ https://adventofcode.com/2019/day/3
 """
 
 from typing import NamedTuple, List, Pattern, Iterator, Dict, Set
+from functools import lru_cache
 import re
 
 patt = re.compile("(?P<axis>[L|R|U|D])(?P<distance>[0-9]+)")
@@ -26,7 +27,7 @@ def parse_wire(moves: List[str], pattern: Pattern) -> Iterator[Command]:
 
 def move_wire(moves: List[str], pattern: Pattern) -> Dict[XY, int]:
     """
-    Calculates a Dict of XY keys and num_stpes as vals 
+    Calculates a Dict of XY keys and num_steps as values 
     based on Commands parsing
     """
     commands = parse_wire(moves, pattern)
