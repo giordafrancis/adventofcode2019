@@ -3,7 +3,6 @@ https://adventofcode.com/2019/day/3
 """
 
 from typing import NamedTuple, List, Pattern, Iterator, Dict, Set
-from functools import lru_cache
 import re
 
 patt = re.compile("(?P<axis>[L|R|U|D])(?P<distance>[0-9]+)")
