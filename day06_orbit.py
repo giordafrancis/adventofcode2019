@@ -87,7 +87,7 @@ def find_common_parent(parents: Dict[str, str], start:str = 'YOU', end:str='SAN'
 
 def min_transfers(parents: Dict[str, str], start:str = 'YOU', end:str='SAN'):
     commom_parent = find_common_parent(parents,start,end)
-    print(commom_parent)
+    # print(commom_parent)
     min_travel = 0
     for child in (start, end):
         #print(f'checking child {child}')
