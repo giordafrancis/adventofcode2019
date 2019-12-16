@@ -15,7 +15,7 @@ from collections import deque
 
 logging.basicConfig(level=logging.INFO)
 
-# 
+# Enum for machine with set states
 class Opcode(Enum): 
     ADD = 1
     MULTIPLY = 2
@@ -56,7 +56,10 @@ def parse_instructions2(pos:int, program:List[int])-> Instructions:
 Modes = List[int]
 Program = List[int]
 
-class EndProgram(Exception): pass
+class EndProgram(Exception):
+    """Not implemented""" 
+    pass
+    
 
 def get_phase_settings(arange:Iterator[int]=range(5,10), size:int=5) -> Generator:
     parameters = itertools.permutations(arange, size)
@@ -64,6 +67,10 @@ def get_phase_settings(arange:Iterator[int]=range(5,10), size:int=5) -> Generato
         yield p
 
 class Amplifier:
+    """ Amplifier is a machine that needs to keep its state
+    Phase provided to Amplifier once only for 5 amps
+    position and program is kept for each iteration
+    """
     def __init__(self, program: Program, phase: int) -> None:
         self.program = program[:]
         self.inputs = deque([phase])
@@ -81,7 +88,6 @@ class Amplifier:
 
     def __call__(self, input_value: int) -> int:
         self.inputs.append(input_value)
-
         while True:
             inst = parse_instructions2(self.pos, self.program)
             opcode = inst.parameters.opcode
@@ -182,7 +188,7 @@ if __name__ == "__main__":
     with open("day07_input.txt", 'r') as file:
         program = problem_prep(file.read())
         part2 = max_output(program = program)
-        print("max signal in feedback look: part2", part2)
+        print("max signal in feedback loop: part2", part2)
 
 
 
