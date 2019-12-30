@@ -14,14 +14,12 @@ https://adventofcode.com/2019/day/11
             - 1 right 90 degrees
     - after it turns the robot should move exactly one panel. 
 - The robot will continue running for a while like this and halt when it is finished drawing. Do not restart the Intcode computer inside the robot during this process.
-
 """
 
 from typing import List, NamedTuple, Tuple, Union
 from enum import Enum
 from collections import deque
 import copy
-
 
 IJ = Tuple[int,int]
 Grid = List[List[int]]
@@ -88,7 +86,7 @@ def _loc(program: List[int], pos: int, mode: int, relative_base: int)-> int:
 
 
 
-def run_intcode(program: List[int], part2: bool = True) -> Union[int, Grid]:
+def run_intcode(program: List[int], part2: bool = True, offset :int = 20) -> Union[int, Grid]:
     """
     Programs takes an input, 9 + 1 opcodes are valid
     Parameter mode suport is available for 6 opcodes
@@ -97,19 +95,20 @@ def run_intcode(program: List[int], part2: bool = True) -> Union[int, Grid]:
     program = program[:]
     initial_loc = (0, 0)
     robot = TrackRobot(loc = initial_loc, facing='UP') # start the robot
-    grid = create_grid(80,80)
-    grid_loc = {}# track painted locs
-    offset = 20 # offset of 20 , (0,0) is (20,20) on grid
+    grid = create_grid() # 80 x 80
+    grid_loc = {} # track painted locs
+    
     if part2:
         row, col = initial_loc
         grid_loc[initial_loc] = 1 # part 2 requirement
-        grid[row + offset][col + offset] = 1         
+        grid[row + offset][col + offset] = 1   # offset of 20 , (0,0) is (20,20) on grid      
     
     for _ in range(10000):
         program.append(0)  # add program large memory, lazy solution
 
     outputs = deque([])
     pos = relative_base =  0
+
     while True:
         modes = parse_opcode(program[pos])
         opcode = modes.opcode
@@ -181,8 +180,8 @@ def turn_robot(turn: int, facing: str) -> str:
     """
     Given instruction turn, rotate the robot 
     """
-    clockwise = {'UP': 'RIGHT','RIGHT': 'DOWN', 'DOWN': 'LEFT', 'LEFT':'UP'}
-
+    clockwise = {'UP': 'RIGHT','RIGHT': 'DOWN', 'DOWN': 'LEFT', 
+                'LEFT':'UP'}
     counter_clockwise = {'UP': 'LEFT', 'LEFT': 'DOWN', 'DOWN': 'RIGHT',
                         'RIGHT': 'UP'}
     if turn == 1: 
@@ -202,7 +201,6 @@ assert turn_robot(1,'LEFT') == 'UP'
 
 def move_robot(loc: IJ, facing: str) -> IJ:
     row, col = loc
-
     if facing == 'UP':
         row += 1
     elif facing == 'DOWN':
@@ -227,22 +225,25 @@ assert move_robot((-3,-4), 'DOWN') == (-4, -4)
 
 # PART 2 
 
-def create_grid(rows: int, columns: int) -> Grid:
+def create_grid(rows: int=80, columns: int=80) -> Grid:
+    """
+    80 x 80 matrix by default 
+    eyeballed for registration identifier printing
+    set to black (0)"""
     return [[0
         for _ in range(rows)]
         for _ in range(columns)
         ]
 
 def get_image(grid: Grid, columns: int = 80, rows: int = 80)-> List[List[str]]:
-    hull = list(reversed(copy.deepcopy(grid))) # upside down 
-    color = None
+    hull = list(reversed(copy.deepcopy(grid))) # image is upside down 
     for i in range(rows):
         for j in range(columns):
             color = hull[i][j]
             if color == 0 :
                 hull[i][j] = " "  # easier to read
             else:
-                hull[i][j] = "X"
+                hull[i][j] = "\u2588"
     return hull
 
 def print_image(grid: Grid, columns: int = 80, rows: int = 80)-> str:
@@ -259,6 +260,5 @@ if __name__ == "__main__":
         part1 = run_intcode(program=program, part2=False)
         grid = run_intcode(program=program, part2=True)
         print('total unique loc painted', part1)
-        print('registration identifier  part2',print_image(grid)[4500:5500]) # crop image
-
+        print('registration identifier part2',print_image(grid)[4500:5500]) # crop image
 
