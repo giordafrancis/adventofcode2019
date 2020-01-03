@@ -142,9 +142,7 @@ assert total_energy(run_epochs(TEST, num_epochs=100)) == 1940
 
 def run_epochs2(moons: Dict[str,Moon]) -> Dict[str, Moon]:
     
-    seen_x = set()
-    seen_y = set()
-    seen_z = set()
+    seen_x, seen_y, seen_z = set(), set(), set()
     steps = 0
     done_x = done_y = done_z = False
 
@@ -205,15 +203,12 @@ def run_epochs2(moons: Dict[str,Moon]) -> Dict[str, Moon]:
         # part 2 checked JG solution based on lcm
         state_x, state_y, state_z = [], [], []
 
-        for moon in moons.values():
-            vx, vy, vz = moon.velocity
-            x, y, z = moon.position
-            curr_x = [x,vx]
-            curr_y = [y,vy]                   
-            curr_z = [z, vz]
-            state_x.extend(curr_x)
-            state_y.extend(curr_y)
-            state_z.extend(curr_z)
+        for pos, vel in moons.values():
+            vx, vy, vz = vel
+            x, y, z = pos
+            state_x.extend([x,vx])
+            state_y.extend([y,vy])
+            state_z.extend([z, vz])
         
         state_x, state_y, state_z= tuple(state_x), tuple(state_y), tuple(state_z)
         
@@ -246,7 +241,7 @@ def run_epochs2(moons: Dict[str,Moon]) -> Dict[str, Moon]:
 def number_steps(steps: Tuple[int,int,int]) -> int:
     """
     based on JG video solution; each cycle is assumed to be 
-    smaller then total cycle (assumption as it could be bigger)
+    smaller then total cycle and repeat itself (assumption as it could be bigger)
     and least common multiple of the 3 number is the solution
     """
     a, b, c = steps

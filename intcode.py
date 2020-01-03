@@ -1,97 +1,140 @@
-from typing import NamedTuple, List, Iterator
+from typing import NamedTuple, List
+from enum import Enum
+from collections import deque, defaultdict
 
-class Parameters(NamedTuple):
+class Opcode(Enum): 
+    ADD = 1
+    MULTIPLY = 2
+    STORE_INPUT = 3
+    SEND_TO_OUTPUT = 4
+    JUMP_IF_TRUE = 5 
+    JUMP_IF_FALSE = 6 
+    LESS_THAN = 7 
+    EQUALS = 8 
+    ADJUST_RELATIVE_BASE = 9 
+    PROGRAM_HALT = 99
+
+class Modes(NamedTuple):
     opcode: int
-    mod1: int
-    mod2: int
-    mod3: int
+    mode1: int
+    mode2: int
+    mode3: int 
 
-class Instructions(NamedTuple):
-    parameters: Parameters
-    val1: int = None
-    val2: int = None
-    val3: int = None
+class EndProgram(Exception): pass
 
-
-def parse_params(input: int) -> Parameters:
+def parse_opcode(input: int) -> Modes:
     padded = f"{input:05}"
-    return Parameters(opcode= int(padded[-2:]), 
-                      mod1= int(padded[-3]), 
-                      mod2=int(padded[-4]), 
-                      mod3=int(padded[-5]))   
+    return Modes(opcode= Opcode(int(padded[-2:])), 
+                      mode1= int(padded[-3]), 
+                      mode2=int(padded[-4]), 
+                      mode3=int(padded[-5])) 
 
 def problem_prep(problem_input: str) -> List[int]:
     inputs = [int(num) for num in problem_input.split(",")]
     return inputs
 
-def parse_instructions2(i:int, inputs:List[int])-> Instructions:
-    params = parse_params(inputs[i])
-    opcode = params.opcode
-    if opcode == 99:
-        return Instructions(parameters = params)
-    elif opcode == 5 or opcode == 6:
-        return Instructions(parameters = params,
-                            val1=inputs[i + 1],
-                            val2 =inputs[i + 2])
-    else:
-        return Instructions(parameters = params,
-                            val1=inputs[i + 1],
-                            val2=inputs[i + 2],
-                            val3=inputs[i + 3])
+class Intcode: # inspired by Joel Grus Intocode computer
+    def __init__(self, program: List[int]):
+        self.program = defaultdict(lambda: 0) 
+        self.program.update({pos:val for pos, val in enumerate(program)})
+        self.pos = 0
+        self.relative_base = 0
+        self.outputs = []
+        self.inputs = deque()
 
-
-def intcode(inputs: List[int], ID:List[int]) -> List[int]:
-    """
-    Programs takes an input, 8 + 1 opcodes are valid
-    Parameter mode suport is available for 6 opcodes
-    pointer(i) is incremented by the number of values in the instruction
-    """
-    inputs = inputs[:] # don't destroy inputs
-    outputs = []
-    opcode = i = 0
-    while True:
-        inst = parse_instructions2(i,inputs)
-        opcode = inst.parameters.opcode
-        params = inst.parameters
-        if opcode == 99: # stop 
-            break
-        # params mode support immediate == 1 or position == 0  
-        elif opcode == 1 or opcode == 2 or opcode == 5 or opcode == 6 or opcode == 7 or opcode == 8: 
-            num1 = inst.val1 if params.mod1 == 1 else inputs[inst.val1]
-            num2 = inst.val2 if params.mod2 == 1 else inputs[inst.val2]
-            if opcode == 1: #add
-                inputs[inst.val3] = num1 + num2 #write to always in position
-                i += 4
-            elif opcode == 2: #mul
-                inputs[inst.val3] = num1 * num2
-                i += 4
-            elif opcode == 5: # pointer jump if true 
-                i = num2 if num1 else i + 3
-            elif opcode == 6: # pointer jump if False
-                i = num2 if not num1 else i + 3
-            elif opcode == 7: # less than
-                inputs[inst.val3] = 1 if num1 < num2 else 0
-                i += 4
-            else: #opcode == 8: # equals
-                inputs[inst.val3] = 1 if num1 == num2 else 0
-                i += 4
-        elif opcode == 3: # input
-            inputs[inst.val1] = inputs[0] # systems ID
-            i += 2
-            
-            
-        elif opcode == 4:
-            output = inputs[inst.val1]
-            outputs.append(output)
-            i += 2
+    def handle_mode(self, pos:int, mode: int) -> int:
+        immediate_parameter = self.program[pos]
+        if mode == 0 :
+            # position mode
+            return self.program[immediate_parameter]
+        elif mode == 1:
+            # immediate mode
+            return  immediate_parameter
+        elif mode == 2:
+            # relative mode
+            return self.program[immediate_parameter + self.relative_base] 
         else:
-            raise RuntimeError(f"invalid opcode {opcode} at position {i}")
-    return outputs
+            raise ValueError(f"unknown mode: {mode} at pos {pos}")
+    def _loc(self, pos: int, mode: int)-> int:
+        """
+        handles the writting instruction  either in position or relative mode only. 
+        We need to know the loc where the value will be written to in the program
+        """
+        immediate_parameter = self.program[pos]
+        if mode == 0:
+            # position mode
+            return immediate_parameter
+        elif mode == 2:
+            # relative mode
+            return immediate_parameter + self.relative_base
 
-    if __name__ == "__main__":
-        with open("day05_inputs.txt", 'r') as file:
-            inputs = problem_prep(file.read())
-            #part1 = intcode(inputs, ID=1)
-            part2 = intcode2(inputs, ID=[5,0])
-            print(part1)
-            print(part2)
+    # from here
+    def __call__(self, input: List[int]) -> EndProgram:
+        """
+        Programs takes an input, 9 + 1 opcodes are valid
+        Parameter mode suport is available for 6 opcodes
+        pointer(i) is incremented by the number of values in the instruction
+        """
+        self.inputs.extend(input)
+        while True:
+            modes = parse_opcode(self.program[self.pos])
+            opcode = modes.opcode
+            if opcode == Opcode.PROGRAM_HALT:
+                print('halting program')
+                return EndProgram
+            elif opcode == Opcode.ADD:
+                num1 = self.handle_mode(self.pos + 1, modes.mode1)
+                num2 = self.handle_mode(self.pos + 2, modes.mode2)
+                loc = self._loc(self.pos + 3, modes.mode3)
+                self.program[loc] = num1 + num2
+                self.pos += 4
+            elif opcode == Opcode.MULTIPLY:
+                num1 = self.handle_mode(self.pos + 1, modes.mode1)
+                num2 = self.handle_mode(self.pos + 2, modes.mode2)
+                loc = self._loc(self.pos + 3, modes.mode3)
+                self.program[loc] = num1 * num2
+                self.pos += 4
+            elif opcode == Opcode.JUMP_IF_TRUE:
+                num1 = self.handle_mode(self.pos + 1, modes.mode1)
+                num2 = self.handle_mode(self.pos + 2, modes.mode2)
+                #print(f'param1 {num1}, param2 {num2}')
+                self.pos = num2 if num1 else self.pos + 3
+            elif opcode == Opcode.JUMP_IF_FALSE: 
+                num1 = self.handle_mode(self.pos + 1, modes.mode1)
+                num2 = self.handle_mode(self.pos + 2, modes.mode2) 
+                #print(f'param1 {num1}, param2 {num2}')
+                self.pos = num2 if not num1 else self.pos + 3
+            elif opcode == Opcode.LESS_THAN: 
+                num1 = self.handle_mode(self.pos + 1, modes.mode1)
+                num2 = self.handle_mode(self.pos + 2, modes.mode2)
+                loc = self._loc(self.pos + 3, modes.mode3)
+                #print(f'param1 {num1}, param2 {num2}, param3 {loc}')
+                self.program[loc] = 1 if num1 < num2 else 0
+                self.pos += 4
+            elif opcode == Opcode.EQUALS: 
+                num1 = self.handle_mode(self.pos + 1, modes.mode1)
+                num2 = self.handle_mode(self.pos + 2, modes.mode2)
+                loc = self._loc(self.pos + 3, modes.mode3)
+                #print(f'param1 {num1}, param2 {num2}, param3 {loc}')
+                self.program[loc] = 1 if num1 == num2 else 0
+                self.pos += 4
+            elif opcode == Opcode.STORE_INPUT: 
+                loc = self._loc(self.pos + 1, modes.mode1)
+                #print(f'param1 {num1}')
+                curr_input = self.inputs.popleft()
+                self.program[loc] = curr_input
+                self.pos += 2
+            elif opcode == Opcode.SEND_TO_OUTPUT:
+                output = self.handle_mode(self.pos + 1, modes.mode1) 
+                self.outputs.append(output)
+                self.pos += 2
+            elif opcode == Opcode.ADJUST_RELATIVE_BASE:
+                num1 = self.handle_mode(self.pos + 1, modes.mode1)
+                #print(f'param1 {num1}')
+                self.relative_base += num1
+                #print('in relative base, adjusted to' , relative_base) 
+                self.pos += 2
+            else:
+                raise RuntimeError(f"invalid opcode {opcode} at position {pos}")
+            return None    
+
